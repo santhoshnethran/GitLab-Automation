@@ -1,18 +1,15 @@
 import os
-import langchain_groq
 from dotenv import load_dotenv
 from langchain_community.utilities.gitlab import GitLabAPIWrapper
 from langchain_community.agent_toolkits.gitlab.toolkit import GitLabToolkit
-from langchain_groq import ChatGroq  # ✅ Correct
-from langchain.agents import create_react_agent, AgentExecutor
-from langchain_core.prompts import PromptTemplate
+from langchain_groq import ChatGroq
+from langgraph.prebuilt import create_react_agent  # ✅ Use LangGraph version
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain.memory import ConversationBufferMemory
-
-
 
 load_dotenv()
 
-# GitLab Wrapper
+# GitLab Setup
 gitlab = GitLabAPIWrapper(
     gitlab_personal_access_token=os.getenv("GITLAB_TOKEN"),
     gitlab_repository="akshithcodez-group/my-agentic-ai",
@@ -22,138 +19,68 @@ gitlab = GitLabAPIWrapper(
 toolkit = GitLabToolkit.from_gitlab_api_wrapper(gitlab)
 tools = toolkit.get_tools()
 
-# LLM
-llm = ChatGroq(temperature=0.3, model_name="llama3-70b-8192")
-
-# Memory
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-from langchain_core.prompts import PromptTemplate
-
-template = """
-You are a helpful GitLab assistant. Your job is to interpret the user’s request, select the correct tool, and use it properly by following strict JSON schema and interaction protocol.
-
----
-
-🔧 **Available Tools (Strict Schema Format): use one of the following {tools}**
-
-1. **Create File**
-   - Description: Create a new file in the repository.
-   - Input JSON:
-     ```json
-     {{
-       "file_path": "string",             
-       "content": "string",               
-       "branch": "branch1",               
-       "commit_message": "string"
-     }}
-     ```
-
-2. **Update File**
-   - Description: Modify an existing file.
-   - Input JSON:
-     ```json
-     {{
-       "file_path": "string",
-       "content": "string",
-       "branch": "branch1",
-       "commit_message": "string"
-     }}
-     ```
-
-3. **Delete File**
-   - Description: Delete an existing file.
-   - Input JSON:
-     ```json
-     {{
-       "file_path": "string",
-       "branch": "branch1",
-       "commit_message": "string"
-     }}
-     ```
-
-4. **Create Issue**
-   - Description: Open a new issue.
-   - Input JSON:
-     ```json
-     {{
-       "title": "string",
-       "description": "string"
-     }}
-     ```
-
-5. **Get Issue**
-   - Description: Retrieve an issue by number.
-   - Input JSON:
-     ```json
-     {{
-       "issue_number": integer
-     }}
-     ```
-
-6. **Get Issues**
-   - Description: List all issues.
-   - Input JSON:
-     ```json
-     {{}}
-     ```
-
-7. **Create Merge Request**
-   - Description: Propose a merge from one branch to another.
-   - Input JSON:
-     ```json
-     {{
-       "source_branch": "string",
-       "target_branch": "string",
-       "title": "string"
-     }}
-     ```
-
----
-
-Question: [User’s query]  
-Thought: [Analyze user intent, check if file exists if needed]  
-Action: [One of {tool_names}]  
-Action Input: [Valid JSON input]  
-Observation: [What happened after the tool call]  
-Thought: Based on this, decide next step  
-Final Answer: [What you successfully did or what the user should do]
-
-
-🚨 **Global Rules (Must Always Obey)**
-
-- 🔑 Use `file_path` exactly as provided — do not modify or guess it
-- 🔐 Always set `"branch": "branch1"` for all file-related actions
-- 📝 All file actions must include a `"commit_message"`
-- 🔁 Do NOT retry or guess actions unless explicitly instructed
-- 🧪 Before calling "Create File", use "Get File" or call the tool and check the error
-- 🤖 If the file creation fails due to existence, switch to "Update File"
-- ✅ Always end with `Final Answer:` explaining what you did
-- ❌ Never assume a file exists unless the GitLab tool confirms it
-- 💡 If unsure whether a file exists, ask the user or use a check
----
-
-{chat_history}
-Question: {input}
-{agent_scratchpad}
-"""
-
-
-
-
-
-prompt = PromptTemplate.from_template(template)
-
-
-# Agent
-agent_executor = AgentExecutor.from_agent_and_tools(
-    agent=create_react_agent(llm=llm, tools=tools, prompt=prompt),
-    tools=tools,
-    memory=memory,
-    verbose=True,
-    handle_parsing_errors=True
+# LLM with explicit tool binding
+llm = ChatGroq(
+    temperature=0.3, 
+    model_name="qwen-qwq-32b",
+    api_key=os.getenv("GROQ_API_KEY")
 )
 
-# Streamlit-compatible function
+# Create ReAct Agent using LangGraph (proper way)
+agent = create_react_agent(
+    model=llm,
+    tools=tools,
+   prompt="""You are a helpful GitLab assistant. Your job is to:
+
+1. **Interpret user requests** and select the appropriate GitLab tool
+2. **Execute CRUD operations** (Create, Read, Update, Delete) on files and issues
+3. **Always use branch "branch1"** for file operations
+4. **Provide clear commit messages** for all file changes
+
+Available operations:
+- Create/Update/Delete files in the repository
+- Create/Get issues
+- Create merge requests
+
+When creating or updating files:
+- Always include a descriptive commit message
+- Use the exact file path as provided by the user to name the file
+- If the file does not exist, create it
+- Set branch to "branch1"
+
+Be precise and execute the requested operations step by step."""
+)
+
+# Memory for conversation history
+memory = ConversationBufferMemory(
+    memory_key="chat_history", 
+    return_messages=True
+)
+
 def run_agent(user_input: str):
-    return agent_executor.invoke({"input": user_input})
+    """Execute the agent with proper message formatting"""
+    try:
+        # Get conversation history
+        chat_history = memory.chat_memory.messages
+        
+        # Create message list for the agent
+        messages = chat_history + [HumanMessage(content=user_input)]
+        
+        # Invoke the agent
+        result = agent.invoke({"messages": messages})
+        
+        # Extract the final response
+        final_message = result["messages"][-1]
+        response_content = final_message.content
+        
+        # Save to memory
+        memory.chat_memory.add_user_message(user_input)
+        memory.chat_memory.add_ai_message(response_content)
+        
+        return {"output": response_content}
+        
+    except Exception as e:
+        error_msg = f"Agent execution failed: {str(e)}"
+        memory.chat_memory.add_user_message(user_input)
+        memory.chat_memory.add_ai_message(error_msg)
+        return {"output": error_msg}
