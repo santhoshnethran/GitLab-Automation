@@ -9,7 +9,6 @@ from langchain.memory import ConversationBufferMemory
 
 load_dotenv()
 
-# GitLab Setup
 gitlab = GitLabAPIWrapper(
     gitlab_personal_access_token=os.getenv("GITLAB_TOKEN"),
     gitlab_repository="akshithcodez-group/my-agentic-ai",
@@ -19,14 +18,14 @@ gitlab = GitLabAPIWrapper(
 toolkit = GitLabToolkit.from_gitlab_api_wrapper(gitlab)
 tools = toolkit.get_tools()
 
-# LLM with explicit tool binding
+# initializing LLM
 llm = ChatGroq(
     temperature=0.3, 
     model_name="qwen-qwq-32b",
     api_key=os.getenv("GROQ_API_KEY")
 )
 
-# Create ReAct Agent using LangGraph (proper way)
+# creating agent
 agent = create_react_agent(
     model=llm,
     tools=tools,
@@ -60,23 +59,13 @@ memory = ConversationBufferMemory(
 def run_agent(user_input: str):
     """Execute the agent with proper message formatting"""
     try:
-        # Get conversation history
         chat_history = memory.chat_memory.messages
-        
-        # Create message list for the agent
         messages = chat_history + [HumanMessage(content=user_input)]
-        
-        # Invoke the agent
         result = agent.invoke({"messages": messages})
-        
-        # Extract the final response
         final_message = result["messages"][-1]
         response_content = final_message.content
-        
-        # Save to memory
         memory.chat_memory.add_user_message(user_input)
         memory.chat_memory.add_ai_message(response_content)
-        
         return {"output": response_content}
         
     except Exception as e:
