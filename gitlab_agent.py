@@ -25,7 +25,7 @@ tools = toolkit.get_tools()
 print(f"🛠️  {len(tools)} tools loaded from GitLabToolkit.")
 
 # Make sure to use a valid, non-deprecated model ID.
-llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0.5)
 print(f"🤖 LLM Initialized: {llm.model_name}")
 
 # In gitlab_agent.py
@@ -119,14 +119,16 @@ agent = create_react_agent(
     llm=llm,
     tools=tools,
     prompt=prompt,
-    output_parser=output_parser
+    output_parser=output_parser,
+    
 )
 
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     verbose=True,
-    handle_parsing_errors=True
+    handle_parsing_errors=True,
+    max_iterations=5
 )
 print("🚀 Agent created and wrapped in executor.")
 
