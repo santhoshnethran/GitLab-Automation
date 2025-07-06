@@ -1,3 +1,5 @@
+#this is the original translation which uses just simple system prompt with no required fields
+
 import os
 import json
 import re
@@ -12,7 +14,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
 #this is example user prompt which will be from the UI
-user_input = "read the file named test.md"
+user_input = "read the content of test.md"
 
 #this is system prompt to instruct the LLM for required output
 system_prompt = """
@@ -30,6 +32,14 @@ Example format:
   "description": "Login fails with error code 403 when using correct credentials.",
   "project_id": "123456"
 }
+
+Common action corrections:
+- "show_file", "see_file", "display_file", "open_file" → "Read File"
+- "edit_file", "change_file", "modify_file" → "Update File"
+- "remove_file", "del_file" → "Delete File"
+- "make_issue", "open_bug", "create_issue", "bug_report" → "Create Pull Request"
+- "write_file", "new_file", "add_file" → "Create File"
+- "comment", "reply_issue" → "Comment on Issue"
 """
 #function to parse the raw json into proper dict
 def json_parse(raw_output):
@@ -62,5 +72,3 @@ def translate():
 #     user_input = "create a new issue in project 123456 titled Login Error with description Login fails on clicking submit"
 #     result = translate()
 #     print("Final Ouput: ",result)
-
-
