@@ -91,7 +91,7 @@ agent = create_react_agent(
 )
 
 #run the agent
-executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=2)
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=2, handle_parsing_errors=True)
 result = executor.invoke({
     "input": parsed_output,
     "agent_scratchpad": ""
