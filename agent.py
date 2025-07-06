@@ -1,6 +1,8 @@
+#this is agent original which was done first with minimal prompt but works
+
 import os
 from dotenv import load_dotenv
-from translation import translate
+from translation1 import translate
 from langchain_groq import ChatGroq
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain_core.runnables import Runnable
@@ -29,8 +31,8 @@ tools = toolkit.get_tools()
 
 #setup LLM
 llm = ChatGroq(
-    temperature = 0.4,
-    model_name = "llama-3.1-8b-instant",
+    temperature = 0,
+    model_name = "llama3-70b-8192",
     groq_api_key = GROQ_API_KEY
 )
 
@@ -56,15 +58,8 @@ You must:
 - If the tool executes successfully and provides the needed result, you must conclude with a Final Answer and stop.
 - If the "action" is unclear, fuzzy, or has a typo, map it to the right tool using your understanding.
 - If any required information is missing, ask a clear follow-up question and stop.
+- If the "old_content" is missing or unknown when performing an "Update File" operation, use the "Read File" tool to fetch the current content first.
 - Once an action is performed successfully, do not repeat it. End with a final answer.
-
-Common action corrections:
-- "show_file", "see_file", "display_file", "open_file" → "Read File"
-- "edit_file", "change_file", "modify_file" → "Update File"
-- "remove_file", "del_file" → "Delete File"
-- "make_issue", "open_bug", "create_issue", "bug_report" → "Create Pull Request"
-- "write_file", "new_file", "add_file" → "Create File"
-- "comment", "reply_issue" → "Comment on Issue"
 
 Use the following format:
 
@@ -103,4 +98,3 @@ result = executor.invoke({
 })
 
 print("Final Agent Result: ", result)
-
