@@ -25,6 +25,24 @@ Example format:
   "project_id": 71420853
 }
 
+For the action "update_file", include these fields in the JSON:
+- "file_path": the relative path to the file (e.g., "test.md")
+- "branch": (optional) the branch where the update should happen
+- "old_content": the exact text that should be replaced
+- "new_content": the new text that should replace the old content
+
+Example:
+{
+  "action": "update_file",
+  "file_path": "test.md",
+  "branch": "branch1",
+  "old_content": "cat",
+  "new_content": "dog"
+}
+
+if the old_content is not provided, leave it blank or omit it as it will be read by the system later on.
+
+
 Common action corrections:
 - "show_file", "see_file", "display_file", "open_file" → "Read File"
 - "edit_file", "change_file", "modify_file" → "Update File"
@@ -37,7 +55,6 @@ Common action corrections:
 """
 
 
-
 def json_parse(raw_output):
     try:
         json_str = re.search(r'\{.*\}', raw_output, re.DOTALL).group()
@@ -45,8 +62,6 @@ def json_parse(raw_output):
     except Exception as e:
         print("Failed to parse JSON: ", e)
         return {}
-
-
 
 def translate(user_input: str):
     try:
