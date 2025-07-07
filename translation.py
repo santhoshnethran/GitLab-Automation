@@ -1,5 +1,3 @@
-#this is the original translation which uses just simple system prompt with no required fields
-
 import os
 import json
 import re
