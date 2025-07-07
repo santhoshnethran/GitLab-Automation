@@ -1,8 +1,11 @@
 streamlit
+python-dotenv
+groq
+# Language Model & Chain Management
 langchain
-langgraph
-langchainhub
 langchain-groq
 langchain-community
-python-dotenv
+# HTTP & GitLab API
+requests
 gitpython
+
