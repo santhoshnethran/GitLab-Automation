@@ -42,7 +42,7 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     with st.spinner("Translating and executing..."):
-        parsed = translate(user_input)
+        parsed = translate()
 
         if parsed:
             # Show raw JSON output from translator
