@@ -14,7 +14,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
 #this is example user prompt which will be from the UI
-user_input = "read the content of test.md"
+user_input = "read test.md"
 
 #this is system prompt to instruct the LLM for required output
 system_prompt = """
@@ -32,6 +32,23 @@ Example format:
   "description": "Login fails with error code 403 when using correct credentials.",
   "project_id": "123456"
 }
+
+For the action "update_file", include these fields in the JSON:
+- "file_path": the relative path to the file (e.g., "test.md")
+- "branch": (optional) the branch where the update should happen
+- "old_content": the exact text that should be replaced
+- "new_content": the new text that should replace the old content
+
+Example:
+{
+  "action": "update_file",
+  "file_path": "test.md",
+  "branch": "branch1",
+  "old_content": "cat",
+  "new_content": "dog"
+}
+
+if the old_content is not provided, leave it blank or omit it as it will be read by the system later on.
 
 Common action corrections:
 - "show_file", "see_file", "display_file", "open_file" → "Read File"
@@ -66,6 +83,9 @@ def translate():
     except Exception as e:
         print("Error during translation: ", e)
         return {}
+
+result = translate()
+print(result)
 
 #to check the code    
 # if __name__ == "__main__":
