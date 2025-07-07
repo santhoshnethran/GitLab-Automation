@@ -1,11 +1,8 @@
-#this is agent original which was done first with minimal prompt but works
-
 import os
 from dotenv import load_dotenv
-from translation1 import translate
+from translation import translate
 from langchain_groq import ChatGroq
 from langchain.agents import create_react_agent, AgentExecutor
-from langchain_core.runnables import Runnable
 from langchain.prompts import PromptTemplate
 from langchain_community.agent_toolkits.gitlab.toolkit import GitLabToolkit
 from langchain_community.utilities.gitlab import GitLabAPIWrapper
