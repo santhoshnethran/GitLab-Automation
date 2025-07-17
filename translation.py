@@ -3,15 +3,13 @@ from groq import Groq
 from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser
 
-#load the environment variables
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-#intializing groq client
-client = Groq(api_key=GROQ_API_KEY)
-
-#this is system prompt to instruct the LLM for required output
-system_prompt = """
+class PromptTranslation:
+    def __init__(self):
+        load_dotenv()
+        self.api_key = os.getenv("GROQ_API_KEY")
+        self.client = Groq(api_key=self.api_key)
+        self.parser = JsonOutputParser()
+        self.system_prompt = """
 You are an assistant that converts user instructions about GitLab operations into a pure JSON format. 
 Do not add any explanations or extra text. Only return valid JSON.
 
@@ -53,28 +51,26 @@ Common action corrections:
 - "comment", "reply_issue" → "Comment on Issue"
 """
 
-# LangChain JSON parser
-json_parser = JsonOutputParser()
+    #function to translate using LLM and parse
+    def translate(self, user_input: str) -> dict:
+        try:
+            response = self.client.chat.completions.create(
+                model = "llama3-70b-8192",
+                messages = [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": user_input}
+                ]
+            )
+            raw_output = response.choices[0].message.content
+            parsed_output = self.parser.parse(raw_output)
+            return parsed_output
+        except Exception as e:
+            print("Error during translation: ", e)
+            return {}
 
-#function to translate using LLM and parse
-def translate(user_input: str):
-    try:
-        response = client.chat.completions.create(
-            model = "llama3-70b-8192",
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_input}
-            ]
-        )
-        raw_output = response.choices[0].message.content
-        parsed_output = json_parser.parse(raw_output)
-        return parsed_output
-    except Exception as e:
-        print("Error during translation: ", e)
-        return {}
-
-#to test
+# for testing
 # if __name__ == "__main__":
-#     user_input = "read test.md"
-#     result = translate()
-#     print("Final Ouput: ",result)
+#   translator = PromptTranslation()
+#   result = translator.translate("read test.md")
+#   print("Final Output:", result)
+
