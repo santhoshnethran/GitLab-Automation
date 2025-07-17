@@ -14,9 +14,6 @@ GITLAB_PERSONAL_ACCESS_TOKEN = os.getenv("GITLAB_PERSONAL_ACCESS_TOKEN")
 GITLAB_REPOSITORY = os.getenv("GITLAB_REPOSITORY")
 GITLAB_BRANCH = os.getenv("GITLAB_BRANCH")
 
-#translated dict from translation.py
-parsed_output = translate()
-
 #setup tools
 gitlab = GitLabAPIWrapper(
     gitlab_personal_access_token=GITLAB_PERSONAL_ACCESS_TOKEN,
@@ -28,12 +25,12 @@ tools = toolkit.get_tools()
 
 #setup LLM
 llm = ChatGroq(
-    temperature = 0,
+    temperature = 0.3,
     model_name = "llama3-70b-8192",
     groq_api_key = GROQ_API_KEY
 )
 
-#instructions to guide the model
+#instructions to guide the model to execute the tools and handle errors
 prompt_template_str = """
 You are an expert GitLab assistant that automates repository operations using the tools provided.
 
@@ -80,18 +77,29 @@ prompt = PromptTemplate(
     template=prompt_template_str
 )
 
-#creating an agent
+#creating an agent and executor
 agent = create_react_agent(
     llm=llm, 
     tools=tools,
     prompt=prompt
 )
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=3, handle_parsing_errors=True)
 
-#run the agent
-executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=2, handle_parsing_errors=True)
-result = executor.invoke({
-    "input": parsed_output,
-    "agent_scratchpad": ""
-})
+#function to run the agent
+def run_gitlab_agent(parsed_output: dict):
+    result = executor.invoke({
+        "input": parsed_output,
+        "agent_scratchpad": ""
+    })
+    return result.get("output", "No response.")
 
-print("Final Agent Result: ", result)
+#to test
+# user_input = "update test.py from 'hello world' to 'meow woof'"
+# parsed_output = translate(user_input)
+# print(parsed_output)
+# result = executor.invoke({
+#     "input": parsed_output,
+#     "agent_scratchpad": ""
+# })
+# print("Final Agent Result: ", result)
+
