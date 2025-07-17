@@ -1,8 +1,8 @@
 import os
 import json
-import re
 from groq import Groq
 from dotenv import load_dotenv
+from langchain_core.output_parsers import JsonOutputParser
 
 #load the environment variables
 load_dotenv()
@@ -56,14 +56,8 @@ Common action corrections:
 - "write_file", "new_file", "add_file" → "Create File"
 - "comment", "reply_issue" → "Comment on Issue"
 """
-#function to parse the raw json into proper dict
-def json_parse(raw_output):
-    try:
-        json_str = re.search(r'\{.*\}', raw_output, re.DOTALL).group()
-        return json.loads(json_str)
-    except Exception as e:
-        print("Failed to parse JSON: ", e)
-        return {}
+
+json_parser = JsonOutputParser()
 
 #function to translate using LLM and parse
 def translate():
@@ -76,7 +70,7 @@ def translate():
             ]
         )
         raw_output = response.choices[0].message.content
-        parsed_output = json_parse(raw_output)
+        parsed_output = json_parser.parse(raw_output)
         return parsed_output
     except Exception as e:
         print("Error during translation: ", e)
