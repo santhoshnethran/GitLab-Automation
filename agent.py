@@ -1,37 +1,35 @@
 import os
 from dotenv import load_dotenv
-from translation import translate
+from translation import PromptTranslation
 from langchain_groq import ChatGroq
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain.prompts import PromptTemplate
 from langchain_community.agent_toolkits.gitlab.toolkit import GitLabToolkit
 from langchain_community.utilities.gitlab import GitLabAPIWrapper
 
-#load environment variables
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GITLAB_PERSONAL_ACCESS_TOKEN = os.getenv("GITLAB_PERSONAL_ACCESS_TOKEN")
-GITLAB_REPOSITORY = os.getenv("GITLAB_REPOSITORY")
-GITLAB_BRANCH = os.getenv("GITLAB_BRANCH")
+class GitLabAgent:
+    def __init__(self):
+        load_dotenv()
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.gitlab_token = os.getenv("GITLAB_PERSONAL_ACCESS_TOKEN")
+        self.repo = os.getenv("GITLAB_REPOSITORY")
+        self.branch = os.getenv("GITLAB_BRANCH")
+        
+        gitlab = GitLabAPIWrapper(
+            gitlab_personal_access_token=self.gitlab_token,
+            gitlab_repository=self.repo,
+            gitlab_branch=self.branch
+        )
+        toolkit = GitLabToolkit.from_gitlab_api_wrapper(gitlab)
+        tools = toolkit.get_tools()
 
-#setup tools
-gitlab = GitLabAPIWrapper(
-    gitlab_personal_access_token=GITLAB_PERSONAL_ACCESS_TOKEN,
-    gitlab_repository=GITLAB_REPOSITORY,
-    gitlab_branch=GITLAB_BRANCH
-)
-toolkit = GitLabToolkit.from_gitlab_api_wrapper(gitlab)
-tools = toolkit.get_tools()
+        llm = ChatGroq(
+            temperature = 0.3,
+            model_name = "llama3-70b-8192",
+            groq_api_key = self.groq_api_key
+        )
 
-#setup LLM
-llm = ChatGroq(
-    temperature = 0.3,
-    model_name = "llama3-70b-8192",
-    groq_api_key = GROQ_API_KEY
-)
-
-#instructions to guide the model to execute the tools and handle errors
-prompt_template_str = """
+        prompt_template_str = '''
 You are an expert GitLab assistant that automates repository operations using the tools provided.
 
 You have access to the following tools:
@@ -70,36 +68,42 @@ Begin!
 
 Input: {input}
 {agent_scratchpad}
-"""
+'''
 
-prompt = PromptTemplate(
-    input_variables=["input", "agent_scratchpad"],
-    template=prompt_template_str
-)
+        prompt = PromptTemplate(
+            input_variables=["input", "agent_scratchpad"],
+            template=prompt_template_str
+        )
 
-#creating an agent and executor
-agent = create_react_agent(
-    llm=llm, 
-    tools=tools,
-    prompt=prompt
-)
-executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=3, handle_parsing_errors=True)
+        agent = create_react_agent(
+            llm=llm,
+            tools=tools,
+            prompt=prompt
+        )
 
-#function to run the agent
-def run_gitlab_agent(parsed_output: dict):
-    result = executor.invoke({
-        "input": parsed_output,
-        "agent_scratchpad": ""
-    })
-    return result.get("output", "No response.")
+        self.executor = AgentExecutor(
+            agent=agent,
+            tools=tools,
+            verbose=True,
+            max_iterations=3,
+            handle_parsing_errors=True
+        )
 
-#to test
-# user_input = "update test.py from 'hello world' to 'meow woof'"
-# parsed_output = translate(user_input)
-# print(parsed_output)
-# result = executor.invoke({
-#     "input": parsed_output,
-#     "agent_scratchpad": ""
-# })
-# print("Final Agent Result: ", result)
+    #function to run the agent
+    def run(self, parsed_output: dict) -> str:
+        result = self.executor.invoke({
+            "input": parsed_output,
+            "agent_scratchpad": ""
+        })
+        return result.get("output", "No response.")
 
+# for testing
+# if __name__ == "__main__":
+#     from translation import PromptTranslation 
+
+#     translator = PromptTranslation()
+#     parsed_output = translator.translate("update test2.py to welcome user")
+
+#     agent = GitLabAgent()
+#     result = agent.run(parsed_output)
+#     print("Final Agent Result:", result)
