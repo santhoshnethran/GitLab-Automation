@@ -1,5 +1,4 @@
 import os
-import json
 from groq import Groq
 from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser
@@ -10,9 +9,6 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 #intializing groq client
 client = Groq(api_key=GROQ_API_KEY)
-
-#this is example user prompt which will be from the UI
-user_input = "read test.md"
 
 #this is system prompt to instruct the LLM for required output
 system_prompt = """
@@ -57,10 +53,11 @@ Common action corrections:
 - "comment", "reply_issue" → "Comment on Issue"
 """
 
+# LangChain JSON parser
 json_parser = JsonOutputParser()
 
 #function to translate using LLM and parse
-def translate():
+def translate(user_input: str):
     try:
         response = client.chat.completions.create(
             model = "llama3-70b-8192",
@@ -76,11 +73,8 @@ def translate():
         print("Error during translation: ", e)
         return {}
 
-result = translate()
-print(result)
-
-#to check the code    
+#to test
 # if __name__ == "__main__":
-#     user_input = "create a new issue in project 123456 titled Login Error with description Login fails on clicking submit"
+#     user_input = "read test.md"
 #     result = translate()
 #     print("Final Ouput: ",result)
