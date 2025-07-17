@@ -3,8 +3,11 @@ import os
 import streamlit as st
 from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
-from translation import translate
-from agent import run_gitlab_agent
+from translation import PromptTranslation
+from agent import GitLabAgent
+
+translator = PromptTranslation()
+agent = GitLabAgent()
 
 st.set_page_config(page_title="GitLab Assistant", layout="centered")
 st.title("🤖 GitLab Automation Assistant")
@@ -27,10 +30,10 @@ if submit_button:
     else:
         try:
             #translates to json
-            parsed_output = translate(prompt)
+            parsed_output = translator.translate(prompt)
 
             #calls agent to get output
-            response = run_gitlab_agent(parsed_output)
+            response = agent.run(parsed_output)
 
         except Exception as e:
             response = f"❌ Error: {str(e)}"
